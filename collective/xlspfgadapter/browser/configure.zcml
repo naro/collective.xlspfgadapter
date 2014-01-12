@@ -1,0 +1,25 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    i18n_domain="ploneformgen">
+
+    <include package="Products.PloneFormGen" />
+
+    <browser:page
+        for="..interfaces.IFormXLSSaveDataAdapter"
+        name="download"
+        permission="Products.PloneFormGen.downloadSavedInput"
+        class=".xlsadapter.XLSAdapterView"
+        attribute="download"
+        />
+
+    <browser:page
+        for="..interfaces.IFormXLSSaveDataAdapter"
+        name="clear"
+        permission="cmf.ModifyPortalContent"
+        class=".xlsadapter.XLSAdapterView"
+        attribute="clear"
+        />
+
+
+</configure>
