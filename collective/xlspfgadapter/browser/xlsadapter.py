@@ -22,6 +22,7 @@ class XLSAdapterView(BrowserView):
         """ Clear data """
         context = aq_inner(self.context)
         context.clear()
+        context.manage_delObjects(context.objectIds())
         form = context.formFolderObject()
         ptool = getToolByName(context, 'plone_utils')
         ptool.addPortalMessage('Data has been cleared.')
@@ -63,25 +64,36 @@ class XLSAdapterView(BrowserView):
         for row in context.listData():
             col_n = 0
             for field in fields:
-                value = row[col_n]
-                typ = field.type
-                if typ == 'datetime':
-                    if isinstance(value, basestring):
-                        value = DateTime(value, datefmt="en")
-                    if value.time == 0.0:
-                        format = XL_DATE_STYLE
+                name = field.getName()
+                if name in row:
+                    value = row[name]
+                    typ = field.type
+                    if typ == 'datetime':
+                        if value:
+                            if isinstance(value, basestring):
+                                value = DateTime(value, datefmt="en")
+                            if value.time == 0.0:
+                                format = XL_DATE_STYLE
+                            else:
+                                format = XL_DATETIME_STYLE
+                            ws.write(row_n, col_n, DT2dt(value), format)
                     else:
-                        format = XL_DATETIME_STYLE
-                    ws.write(row_n, col_n, DT2dt(value), format)
+                        ws.write(row_n, col_n, value)
                 else:
-                    ws.write(row_n, col_n, value)
+                    # not saved - probably field added/removed during time
+                    ws.write(row_n, col_n, 'N/A')
                 col_n += 1
             for f in context.getExtraData():
-                value = row[col_n]
-                if f == 'dt':
-                    ws.write(row_n, col_n, DT2dt(DateTime(value)), XL_DATE_STYLE)
+                name = 'extra_' + f
+                if name in row:
+                    value = row[name]
+                    if f == 'dt':
+                        ws.write(row_n, col_n, DT2dt(DateTime(value)), XL_DATE_STYLE)
+                    else:
+                        ws.write(row_n, col_n, value)
                 else:
-                    ws.write(row_n, col_n, value)
+                    # not saved - probably field added/removed during time
+                    ws.write(row_n, col_n, 'N/A')
                 col_n += 1
             row_n += 1
 

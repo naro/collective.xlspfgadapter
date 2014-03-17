@@ -22,7 +22,11 @@ from BTrees.Length import Length
 from Products.Archetypes import atapi
 from Products.CMFCore.permissions import ModifyPortalContent
 from Products.CMFPlone.utils import base_hasattr, safe_hasattr
+from Products.CMFPlone.utils import _createObjectByType
+from Products.CMFPlone.utils import safe_unicode
+from plone.i18n.normalizer.interfaces import IUserPreferredURLNormalizer
 
+from Products.ATContentTypes.content.base import ATCTFolder
 from Products.ATContentTypes.content.base import registerATCT
 
 from Products.PloneFormGen.config import DOWNLOAD_SAVED_PERMISSION
@@ -36,21 +40,41 @@ from collective.xlspfgadapter.interfaces import IFormXLSSaveDataAdapter
 
 
 from zope.contenttype import guess_content_type
-logger = logging.getLogger("PloneFormGen")    
+logger = logging.getLogger("PloneFormGen")
 
 import xlwt
 
 ExLinesField = atapi.LinesField
 
 
-class FormXLSSaveDataAdapter(FormActionAdapter):
-    """A form action adapter that will save form input data and 
+def get_safe_id(request, container, title):
+    result = base_result = IUserPreferredURLNormalizer(request).normalize(safe_unicode(title))
+    idx = 1
+    while result in container.objectIds():
+        result = base_result + '-' + str(idx)
+        idx += 1
+    return result
+
+
+class FormXLSSaveDataAdapter(ATCTFolder, FormActionAdapter):
+    """A form action adapter that will save form input data and
        return it in XLS format.
-       Based on FormXLSSaveDataAdapter
+       Based on SaveDataAdapter
        """
     implements(IFormXLSSaveDataAdapter)
-    
+
     schema = FormAdapterSchema.copy() + atapi.Schema((
+        atapi.BooleanField("storeAttachments",
+            required=False,
+            default=True,
+            widget=atapi.BooleanWidget(
+                label = _(u'label_storeAttachments_text', default=u"Store attachments?"),
+                description = _(u'help_storeAttachments_text', default=u"If checked, FileFields content will be saved inside this save adapter. "
+                                                                       u"Link to the attachment will be part of XLS file. "
+                                                                       u"Please note, if unchecked, attachments may be lost in the Universe."),
+                ),
+            ),
+
         atapi.LinesField('ExtraData',
             widget=atapi.MultiSelectionWidget(
                 label=_(u'label_savedataextra_text', default='Extra Data'),
@@ -96,7 +120,7 @@ class FormXLSSaveDataAdapter(FormActionAdapter):
     def listData(self):
         for item in self._inputStorage.values():
             yield item
-        
+
     def _addDataRow(self, value):
 
         self._setupStorage()
@@ -116,10 +140,10 @@ class FormXLSSaveDataAdapter(FormActionAdapter):
     security.declareProtected(ModifyPortalContent, 'addDataRow')
     def addDataRow(self, value):
         """ a wrapper for the _addDataRow method """
-        
+
         self._addDataRow(value)
 
-    
+
     def onSuccess(self, fields, REQUEST=None, loopstop=False):
         """
         saves data.
@@ -143,33 +167,43 @@ class FormXLSSaveDataAdapter(FormActionAdapter):
 
         from ZPublisher.HTTPRequest import FileUpload
 
-        data = []
+        data = dict()
         for f in fields:
+            name = f.fgField.getName()
             if f.isFileField():
-                file = REQUEST.form.get('%s_file' % f.fgField.getName())
+                file = REQUEST.form.get('%s_file' % name)
                 if isinstance(file, FileUpload) and file.filename != '':
-                    file.seek(0)
-                    fdata = file.read()
-                    filename = file.filename
-                    mimetype, enc = guess_content_type(filename, fdata, None)
-                    if mimetype.find('text/') >= 0:
-                        # convert to native eols
-                        fdata = fdata.replace('\x0d\x0a', '\n').replace('\x0a', '\n').replace('\x0d', '\n')
-                        data.append( '%s:%s:%s:%s' %  (filename, mimetype, enc, fdata) )
+                    if self.getStoreAttachments():
+                        file.seek(0)
+                        fdata = file.read()
+                        filename = file.filename
+                        mimetype, enc = guess_content_type(filename, fdata, None)
+                        # create File object
+                        _id = get_safe_id(REQUEST, self, filename)
+                        obj = _createObjectByType('FormXLSSaveDataFile', self, _id)
+                        file.seek(0)
+                        obj.setTitle(filename)
+                        obj.setFile(file)
+                        obj.unmarkCreationFlag()
+                        obj.reindexObject()
+                        url = obj.absolute_url()
+                        data[name] = url
                     else:
-                        data.append( '%s:%s:%s:Binary upload discarded' %  (filename, mimetype, enc) )
+                        data[name] = 'DISCARDED'
                 else:
-                    data.append( 'NO UPLOAD' )
+                    data[name] = 'NO UPLOAD'
             elif not f.isLabel():
                 val = f.htmlValue(REQUEST)
-                data.append(val)
+                data[name] = val
 
         if self.ExtraData:
             for f in self.ExtraData:
+                name = 'extra_' + f
                 if f == 'dt':
-                    data.append( str(DateTime()) )
+                    data[name] = str(DateTime())
                 else:
-                    data.append( getattr(REQUEST, f, '') )
+                    if f in REQUEST:
+                        data[name] = REQUEST.get(f)
 
         self._addDataRow( data )
 
@@ -177,21 +211,21 @@ class FormXLSSaveDataAdapter(FormActionAdapter):
     security.declareProtected(DOWNLOAD_SAVED_PERMISSION, 'getColumnNames')
     def getColumnNames(self):
         """Returns a list of column names"""
-        
+
         names = [field.getName() for field in self.fgFields(displayOnly=True)]
         for f in self.ExtraData:
             names.append(f)
-        
+
         return names
 
     security.declareProtected(DOWNLOAD_SAVED_PERMISSION, 'getColumnTitles')
     def getColumnTitles(self):
         """Returns a list of column titles"""
-        
+
         names = [field.widget.label for field in self.fgFields(displayOnly=True)]
         for f in self.ExtraData:
             names.append(self.vocabExtraDataDL().getValue(f, ''))
-        
+
         return names
 
     def vocabExtraDataDL(self):

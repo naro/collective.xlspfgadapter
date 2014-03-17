@@ -2,6 +2,8 @@
 <object name="portal_types">
   <object name="FormXLSSaveDataAdapter"
     meta_type="Factory-based Type Information with dynamic views" />
+  <object name="FormXLSSaveDataFile"
+    meta_type="Factory-based Type Information with dynamic views" />
   <object name="FormFolder"
     meta_type="Factory-based Type Information with dynamic views"/>
 </object>

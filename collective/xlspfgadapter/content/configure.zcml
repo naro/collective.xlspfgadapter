@@ -13,4 +13,15 @@
         />
   </class>
 
+  <class class=".savedatafile.FormXLSSaveDataFile">
+    <require
+        permission="zope2.View"
+        interface="..interfaces.IFormXLSSaveDataFile"
+        />
+    <require
+        permission="cmf.ModifyPortalContent"
+        set_schema="..interfaces.IFormXLSSaveDataFile"
+        />
+  </class>
+
 </configure>

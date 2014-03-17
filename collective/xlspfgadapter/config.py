@@ -6,4 +6,5 @@ PROJECTNAME = 'collective.xlspfgadapter'
 ADD_PERMISSIONS = {
     # -*- extra stuff goes here -*-
     'FormXLSSaveDataAdapter': 'collective.xlspfgadapter: Add FormXLSSaveDataAdapter',
+    'FormXLSSaveDataFile': 'collective.xlspfgadapter: Add FormXLSSaveDataAdapter',
 }
