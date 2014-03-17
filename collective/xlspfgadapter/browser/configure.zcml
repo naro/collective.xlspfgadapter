@@ -17,8 +17,8 @@
         for="..interfaces.IFormXLSSaveDataAdapter"
         name="clear"
         permission="cmf.ModifyPortalContent"
-        class=".xlsadapter.XLSAdapterView"
-        attribute="clear"
+        class=".xlsadapter.XLSAdapterClearView"
+        template="clear.pt"
         />
 
 

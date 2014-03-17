@@ -16,17 +16,29 @@ def DT2dt(date):
     return datetime.datetime(*args)
 
 
-class XLSAdapterView(BrowserView):
+class XLSAdapterClearView(BrowserView):
 
-    def clear(self):
+    def _clear(self):
         """ Clear data """
         context = aq_inner(self.context)
         context.clear()
         context.manage_delObjects(context.objectIds())
-        form = context.formFolderObject()
-        ptool = getToolByName(context, 'plone_utils')
-        ptool.addPortalMessage('Data has been cleared.')
-        self.request.response.redirect(form.absolute_url())
+
+    def form_url(self):
+        form = self.context.formFolderObject()
+        return form.absolute_url()
+
+    def __call__(self):
+        context = aq_inner(self.context)
+        if self.request.form.get('form.submitted') == '1':
+            self._clear()
+            form_url = self.form_url()
+            ptool = getToolByName(context, 'plone_utils')
+            ptool.addPortalMessage('Data has been cleared.')
+            return self.request.response.redirect(form_url)
+        return self.index()
+
+class XLSAdapterView(BrowserView):
 
     def download(self):
         context = aq_inner(self.context)
