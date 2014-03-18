@@ -7,6 +7,14 @@
 
     <browser:page
         for="..interfaces.IFormXLSSaveDataAdapter"
+        name="view"
+        permission="zope2.View"
+        class=".xlsadapter.XLSAdapterView"
+        template="xlsadapter.pt"
+        />
+
+    <browser:page
+        for="..interfaces.IFormXLSSaveDataAdapter"
         name="download"
         permission="Products.PloneFormGen.downloadSavedInput"
         class=".xlsadapter.XLSAdapterView"

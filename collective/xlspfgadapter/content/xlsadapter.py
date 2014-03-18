@@ -118,6 +118,7 @@ class FormXLSSaveDataAdapter(ATCTFolder, FormActionAdapter):
 
     security.declareProtected(DOWNLOAD_SAVED_PERMISSION, 'listData')
     def listData(self):
+        self._setupStorage()  # be sure we have _inputStorage
         for item in self._inputStorage.values():
             yield item
 

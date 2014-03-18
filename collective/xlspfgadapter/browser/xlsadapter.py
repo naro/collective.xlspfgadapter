@@ -2,6 +2,7 @@ from cStringIO import StringIO
 from DateTime import DateTime
 import datetime
 from Products.CMFCore.utils import getToolByName
+from Products.PloneFormGen.config import DOWNLOAD_SAVED_PERMISSION
 from Acquisition import aq_inner
 from Products.Five import BrowserView
 import xlwt
@@ -16,35 +17,22 @@ def DT2dt(date):
     return datetime.datetime(*args)
 
 
-class XLSAdapterClearView(BrowserView):
-
-    def _clear(self):
-        """ Clear data """
-        context = aq_inner(self.context)
-        context.clear()
-        context.manage_delObjects(context.objectIds())
-
-    def form_url(self):
-        form = self.context.formFolderObject()
-        return form.absolute_url()
-
-    def __call__(self):
-        context = aq_inner(self.context)
-        if self.request.form.get('form.submitted') == '1':
-            self._clear()
-            form_url = self.form_url()
-            ptool = getToolByName(context, 'plone_utils')
-            ptool.addPortalMessage('Data has been cleared.')
-            return self.request.response.redirect(form_url)
-        return self.index()
-
 class XLSAdapterView(BrowserView):
+
+    def can_download(self):
+        context = aq_inner(self.context)
+        mtool = getToolByName(context, 'portal_membership')
+        return mtool.checkPermission(DOWNLOAD_SAVED_PERMISSION, context)
+
+    def count(self):
+        storage = getattr(self.context, '_inputStorage', [])
+        return len(storage)
 
     def download(self):
         context = aq_inner(self.context)
         form = context.formFolderObject()
 
-        timestamp = datetime.datetime.now().strftime(r"%Y-%m-%d-%H-%m")
+        timestamp = datetime.datetime.now().strftime(r"%Y-%m-%d-%H-%M-%S")
         filename = "%s-%s.xls" % (form.getId(), timestamp)
 
         self.request.response.setHeader('Content-Type', 'application/excel')
@@ -111,3 +99,27 @@ class XLSAdapterView(BrowserView):
 
         wb.save(stream)
         return stream.getvalue()
+
+
+class XLSAdapterClearView(BrowserView):
+
+    def _clear(self):
+        """ Clear data """
+        context = aq_inner(self.context)
+        context.clear()
+        context.manage_delObjects(context.objectIds())
+
+    def form_url(self):
+        form = self.context.formFolderObject()
+        return form.absolute_url()
+
+    def __call__(self):
+        context = aq_inner(self.context)
+        if self.request.form.get('form.submitted') == '1':
+            self._clear()
+            form_url = self.form_url()
+            ptool = getToolByName(context, 'plone_utils')
+            ptool.addPortalMessage('Data has been cleared.')
+            return self.request.response.redirect(form_url)
+        return self.index()
+
