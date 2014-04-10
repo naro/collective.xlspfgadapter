@@ -42,7 +42,7 @@ class XLSAdapterView(BrowserView):
         stream = StringIO()
 
         wb = xlwt.Workbook(encoding='utf8')
-        ws = wb.add_sheet(form.Title())
+        ws = wb.add_sheet('Sheet 1')
         row_n = col_n = 0
 
         ws.set_panes_frozen(True)  # frozen headings instead of split panes
